@@ -56,7 +56,7 @@ class FrameExtractor:
         ydl_opts = {
             "quiet": True,
             "no_warnings": True,
-            "format": "best[ext=mp4]/best",
+            "format": "bestvideo[ext=mp4]/bestvideo/best[ext=mp4]/best",
             "skip_download": True,
         }
         try:

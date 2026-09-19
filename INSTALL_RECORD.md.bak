@@ -1,0 +1,137 @@
+# mcptube — install record
+
+Manual patches applied directly to the **pipx virtualenv**, outside of pip.
+
+| | |
+|---|---|
+| pipx venv | `C:\Users\mrsim\pipx\venvs\mcptube` |
+| site-packages | `C:\Users\mrsim\pipx\venvs\mcptube\Lib\site-packages\mcptube` |
+| Installed version | mcptube 0.2.1 (PyPI) |
+| Python | 3.12.10 |
+| Working clone | `C:\Users\mrsim\Tools\mcptube` (branch `vision`) |
+
+---
+
+## ⚠️ Reapply after upgrade
+
+**Every patch below lives only in the pipx venv's `site-packages`. `pipx upgrade mcptube`,
+`pipx reinstall mcptube`, or `pipx install --force mcptube` overwrites those files and silently
+reverts all of them.** Nothing errors — extraction just goes back to its old behaviour.
+
+After any upgrade or reinstall, re-copy the patched modules from the clone:
+
+```powershell
+copy /Y "C:\Users\mrsim\Tools\mcptube\src\mcptube\ingestion\scene_frames.py" ^
+        "C:\Users\mrsim\pipx\venvs\mcptube\Lib\site-packages\mcptube\ingestion\scene_frames.py"
+rmdir /S /Q "C:\Users\mrsim\pipx\venvs\mcptube\Lib\site-packages\mcptube\ingestion\__pycache__"
+```
+
+Then confirm the patch is live:
+
+```powershell
+"C:\Users\mrsim\pipx\venvs\mcptube\Scripts\python.exe" -c ^
+  "from mcptube.ingestion.scene_frames import SceneFrameExtractor as S; print(hasattr(S,'_select_evenly'))"
+```
+
+`True` means Patch 10 is in place. `False` means the upgrade reverted it.
+
+These patches are **not** on `origin/vision`. Until they are committed and released, the clone is
+the only master copy — do not delete it.
+
+---
+
+## Patch 10 — even-sampling frame selection
+
+**Applied:** 2026-09-18
+**Fixes:** [issue #11](https://github.com/0xchamin/mcptube/issues/11) — "Scene frame cap is
+first-N, silently truncating the end of the video"
+**File:** `mcptube/ingestion/scene_frames.py`
+**Applied to:** pipx venv **and** the working clone (both, content-identical)
+**Backup of pre-patch venv file:** `…\ingestion\scene_frames.py.pre-patch10.bak`
+
+### Problem
+
+`_extract_with_ffmpeg` capped extraction with `-frames:v 50`. That is an *output* limit: ffmpeg
+tears down the pipeline as soon as 50 JPEGs are written, so the decoder never reaches the rest of
+the video. On any video with more than 50 scene changes the back of the runtime was never
+examined, and nothing in the output said so.
+
+### Change
+
+Extraction is now two passes:
+
+1. **Detect** — `select='gt(scene,T)',showinfo` with `-f null -`. Nothing is encoded, so this
+   costs one decode and no writes. Produces the full candidate timestamp list.
+   (`scale`/`format` are deliberately omitted: `select` runs before them in the normal chain, so
+   they never influenced detection.)
+2. **Select** — `_select_evenly()` divides the runtime into `_MAX_FRAMES` equal buckets and takes
+   the earliest candidate in each. Empty buckets leave budget unspent, so the remainder is
+   backfilled with the leftover candidates furthest from an already-chosen one.
+3. **Extract** — one `ffmpeg -ss <t> … -frames:v 1` per selected timestamp. Per-frame seeking
+   avoids a second full decode.
+
+When the cap would have truncated, a `logger.warning` now names the cost explicitly:
+
+```
+Scene-frame cap reached for ASlLmFPlJ3M: 115 scene changes detected, keeping 50 spread
+evenly across the runtime. Taking the first 50 would have covered only 705.2s of 1942.9s (36%).
+```
+
+`_extract_with_ffmpeg` is retained as the fallback for when pass 1 detects no scene changes at
+all (there is no candidate list to spread in that case).
+
+### Measured — `ASlLmFPlJ3M`, 32:23 (1943 s), threshold 0.4
+
+115 scene changes detected; budget 50 frames.
+
+| | Before (first-N) | After (even) |
+|---|---|---|
+| Frames | 50 (cap) | 50 (cap) |
+| First / last frame | 2.3 s / 705.2 s | 2.3 s / 1900.9 s |
+| **Runtime covered** | **36.3%** | **97.8%** |
+| Mean gap between frames | — | 38.7 s (min 13.4 s, max 185.0 s) |
+
+Frames per quarter of runtime:
+
+| Quarter | Before | After |
+|---|---|---|
+| Q1 0–486 s | 32 | 11 |
+| Q2 486–972 s | 18 | 16 |
+| Q3 972–1457 s | **0** | 12 |
+| Q4 1457–1943 s | **0** | 11 |
+
+Extraction wall time (download + detect + 50 seeks): 60.7 s.
+
+### Tests
+
+`tests/test_scene_frames.py` — 29 passed (22 pre-existing + 7 new in `TestSelectEvenly`).
+
+```powershell
+# conftest.py imports chromadb, which is not a declared dependency, so --noconftest is required
+python -m pytest tests/test_scene_frames.py -q --noconftest
+```
+
+---
+
+## Pre-existing venv modifications (present before Patch 10)
+
+Found already applied to the venv's `scene_frames.py` and carried forward by Patch 10. They were
+**not** in the clone; Patch 10 synced the clone up to match, so the two copies now agree.
+
+| Change | Why |
+|---|---|
+| `format=yuvj420p` in the filter chain | ffmpeg 9's mjpeg encoder rejects limited-range YUV ("Non full-range YUV is non-standard"), fails to open, and silently writes **zero** frames for every video. |
+| `_download_video()` — download first, then run ffmpeg on the local file | Streaming a googlevideo URL into ffmpeg gets throttled to ~2 MB/min; yt-dlp's own downloader saturates the link. Hours vs. seconds per video. |
+| `_FORMAT_SELECTOR` preferring H.264 ≤720p | 1280×720 matches `_SCALE_WIDTH` exactly and decodes far faster than AV1/VP9 1080p60. Muxed `best` no longer exists on most YouTube videos. |
+| `MCPTUBE_SCENE_THRESHOLD` env override | Lets a batch run set the threshold without editing code. |
+| `-fps_mode vfr` (was `-vsync vfr`) | `-vsync` is deprecated in ffmpeg 9. |
+| ffmpeg timeout 120 s → 1800 s | Scene detection must read the whole video. |
+
+Every other module in the venv is byte-identical to the clone apart from line endings (venv LF,
+clone CRLF).
+
+---
+
+## Environment
+
+ffmpeg 9.0.1-full_build (Gyan) · yt-dlp 2026.8.19 · Windows 11 Pro 26200 · Python 3.12.10

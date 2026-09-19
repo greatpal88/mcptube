@@ -4,6 +4,7 @@ import typer
 from pathlib import Path
 
 from mcptube.config import settings
+from mcptube.export import default_export_dir, export_video
 from mcptube.ingestion.frames import FrameExtractionError
 from mcptube.ingestion.youtube import ExtractionError
 from mcptube.llm import LLMClient
@@ -198,6 +199,76 @@ def frame_query(
         typer.echo(f"   Matched:   {result['text']}")
     except (FrameExtractionError, RuntimeError) as e:
         typer.echo(f"❌ {e}", err=True)
+        raise typer.Exit(code=1)
+
+
+# --- Export ---
+
+
+@app.command()
+def export(
+    query: str = typer.Argument(
+        None, help="Video ID, index number, or search text. Omit with --all."
+    ),
+    export_all: bool = typer.Option(
+        False, "--all", help="Export every video in the library."
+    ),
+    out: str = typer.Option(
+        None,
+        "--out",
+        "-o",
+        help="Output directory. Defaults to $MCPTUBE_EXPORT_DIR.",
+    ),
+    no_fetch_published: bool = typer.Option(
+        False,
+        "--no-fetch-published",
+        help="Skip the yt-dlp lookup that fills the 'published' frontmatter field.",
+    ),
+    no_assets: bool = typer.Option(
+        False,
+        "--no-assets",
+        help="Do not copy frame images into <export dir>/../assets/<videoID>/.",
+    ),
+):
+    """Export video(s) as self-contained source-material markdown.
+
+    Writes the transcript (organised under chapters) and the raw per-frame
+    vision descriptions — source material, not compiled wiki pages. Reads the
+    existing stores only, so re-exporting never re-ingests. Re-running
+    overwrites the same file rather than creating a duplicate.
+    """
+    if not export_all and not query:
+        typer.echo("❌ Give a video, or use --all.", err=True)
+        raise typer.Exit(code=1)
+
+    out_dir = Path(out) if out else default_export_dir()
+
+    if export_all:
+        repo = SQLiteVideoRepository()
+        stubs = repo.list_all()
+        if not stubs:
+            typer.echo("Library is empty. Nothing to export.")
+            raise typer.Exit()
+        # list_all() omits transcripts, so reload each video in full.
+        videos = [v for v in (repo.get(s.video_id) for s in stubs) if v]
+    else:
+        svc = _get_service()
+        videos = [_resolve_or_exit(svc, query)]
+
+    written = []
+    for video in videos:
+        try:
+            written.append((video, export_video(
+                video, out_dir, fetch_published_date=not no_fetch_published,
+                copy_assets=not no_assets)))
+        except OSError as e:
+            typer.echo(f"❌ {video.video_id}: {e}", err=True)
+
+    for video, path in written:
+        typer.echo(f"✅ {video.video_id}  →  {path}")
+    if len(written) > 1:
+        typer.echo(f"\n{len(written)} files written to {out_dir}")
+    if not written:
         raise typer.Exit(code=1)
 
 

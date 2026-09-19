@@ -11,6 +11,15 @@ from mcptube.wiki.updater import WikiUpdater
 
 logger = logging.getLogger(__name__)
 
+def _skip_wiki() -> bool:
+    """True when MCPTUBE_SKIP_WIKI asks for video-page-only ingest."""
+    import os
+
+    return os.environ.get("MCPTUBE_SKIP_WIKI", "").strip().lower() in {
+        "1", "true", "yes", "on",
+    }
+
+
 
 class WikiEngine:
     """High-level orchestrator for the wiki knowledge base.
@@ -49,7 +58,29 @@ class WikiEngine:
         logger.info("Ingesting video into wiki: %s — %s", video.video_id, video.title)
 
         # Step 1: Extract knowledge (single LLM pass)
-        extracted = self._extractor.extract(video, frame_descriptions, text_only)
+        #
+        # MCPTUBE_SKIP_WIKI=1 skips the knowledge-extraction pass and, with it,
+        # every entity/topic/concept page -- so the updater has nothing to
+        # synthesise and makes no LLM calls either. The video page is still
+        # built and saved, because its key_frames list is assembled
+        # mechanically from the vision output; only `summary` and
+        # `key_timestamps` come from the skipped LLM pass and are left empty.
+        # Transcript, tags, frame extraction and vision descriptions are
+        # unaffected, and the markdown export reads key_frames only.
+        if _skip_wiki():
+            logger.info(
+                "MCPTUBE_SKIP_WIKI set: saving video page only (transcript + "
+                "%d frame descriptions kept); skipping knowledge extraction "
+                "and entity/topic/concept synthesis",
+                len(frame_descriptions or []),
+            )
+            extracted = self._extractor.build_pages_without_llm(
+                video, frame_descriptions, text_only
+            )
+        else:
+            extracted = self._extractor.extract(
+                video, frame_descriptions, text_only
+            )
 
         # Step 2: Merge into existing wiki
         stats = self._updater.update_wiki(extracted)

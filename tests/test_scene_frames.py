@@ -89,6 +89,52 @@ class TestParseShowinfoTimestamps:
         assert abs(ts[1] - 15.0) < 0.001
 
 
+class TestSelectEvenly:
+    """Even distribution of the frame budget across the runtime (issue #11)."""
+
+    def test_under_budget_returns_everything(self):
+        cands = [1.0, 2.0, 3.0]
+        assert SceneFrameExtractor._select_evenly(cands, 50, 100.0) == cands
+
+    def test_never_exceeds_budget(self):
+        cands = [float(i) for i in range(500)]
+        sel = SceneFrameExtractor._select_evenly(cands, 50, 500.0)
+        assert len(sel) == 50
+
+    def test_only_returns_real_candidates(self):
+        cands = [i * 3.7 for i in range(400)]
+        sel = SceneFrameExtractor._select_evenly(cands, 50, 1480.0)
+        assert set(sel).issubset(set(cands))
+
+    def test_result_is_sorted_and_unique(self):
+        cands = [i * 0.5 for i in range(600)]
+        sel = SceneFrameExtractor._select_evenly(cands, 50, 300.0)
+        assert sel == sorted(sel)
+        assert len(set(sel)) == len(sel)
+
+    def test_spreads_past_a_front_loaded_cluster(self):
+        """The failure in issue #11: an intro that eats the whole budget."""
+        # 200 scene changes in the first 20s, then 30 spread over 1000s.
+        cands = [i * 0.1 for i in range(200)] + [20.0 + i * 32.0 for i in range(30)]
+        sel = SceneFrameExtractor._select_evenly(cands, 50, 1000.0)
+        # first-N would have stopped at 4.9s; this must reach the end.
+        assert sel[-1] > 900.0
+        # and must not spend the whole budget on the intro.
+        assert sum(1 for t in sel if t < 20.0) < 50
+
+    def test_unknown_duration_falls_back_to_positional_spacing(self):
+        cands = [float(i) for i in range(300)]
+        sel = SceneFrameExtractor._select_evenly(cands, 50, 0.0)
+        assert len(sel) == 50
+        assert sel == sorted(sel)
+
+    def test_backfills_when_buckets_are_empty(self):
+        """All candidates in one bucket still spends the full budget."""
+        cands = [i * 0.001 for i in range(500)]
+        sel = SceneFrameExtractor._select_evenly(cands, 50, 1000.0)
+        assert len(sel) == 50
+
+
 class TestCaching:
     def test_load_cached_frames(self, extractor, output_dir, cached_frames):
         loaded = extractor._load_cached(output_dir)

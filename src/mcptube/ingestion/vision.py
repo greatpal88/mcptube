@@ -20,7 +20,7 @@ class VisionDescriber:
     """
 
     _VISION_MODELS = {
-        "ANTHROPIC_API_KEY": "anthropic/claude-sonnet-4-20250514",
+        "ANTHROPIC_API_KEY": "anthropic/claude-sonnet-5",
         "OPENAI_API_KEY": "gpt-4o",
         "GOOGLE_API_KEY": "gemini/gemini-2.0-flash",
     }

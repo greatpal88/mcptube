@@ -1,0 +1,102 @@
+{
+  "anthropic/claude-sonnet-5": {
+    "frames": [
+      {
+        "frame": "scene_0004.jpg",
+        "timestamp": 17.72,
+        "seconds": 2.624586582183838,
+        "in": 1338,
+        "out": 107,
+        "text": "This image is heavily blurred and appears to be a fast-motion or transition frame, showing streaks of white, gray, and pink tones with faint horizontal lines suggesting rapid camera movement or a video transition effect. No readable text, distinct diagrams, or identifiable people/objects can be discerned due to the motion blur."
+      },
+      {
+        "frame": "scene_0007.jpg",
+        "timestamp": 190.12,
+        "seconds": 3.3843657970428467,
+        "in": 1338,
+        "out": 109,
+        "text": "A video call screen recording shows two men in webcam boxes on the right side, one speaking while the other looks down, alongside a shared screen displaying a dark interface with a sparkle/magic wand icon and the loading text \"Loading GPT-Image2 cases...\" indicating a tool or application related to AI image generation is being demonstrated."
+      },
+      {
+        "frame": "scene_0011.jpg",
+        "timestamp": 488.04,
+        "seconds": 3.069828987121582,
+        "in": 1338,
+        "out": 171,
+        "text": "The screen share shows a webpage titled \"AprilNEA / OpenLogi\" with navigation tabs (Summary, Growth, Creator, Tweet, Video) and text reading \"ShimmyTheDev, two minutes on why you'd drop the Logitech app. Small channel, but current and accurate,\" accompanied by an embedded black video player with a \"Watch on YouTube\" link. Two men are shown in video call windows on the right side, both smiling, in what appears to be a screen-sharing presentation or discussion session."
+      },
+      {
+        "frame": "scene_0017.jpg",
+        "timestamp": 806.6,
+        "seconds": 3.7551746368408203,
+        "in": 1338,
+        "out": 213,
+        "text": "The screen share shows a webpage for \"harry0703/MoneyPrinterTurbo\" with tabs labeled Summary, Growth, Creator, Tweet, and Video, displaying a caption noting that \"Code With Robby runs the whole thing in Google Colab with free Gemini and Pexels keys \u2014 no local install.\" Embedded is a YouTube tutorial video titled \"MoneyPrinterTurbo: The Open-Source AI Video Generator You Need\" showing a Google Colab notebook with steps for configuring ngrok and launching the application. Two people are visible in webcam feeds on the right side, both engaged in a video call discussion."
+      },
+      {
+        "frame": "scene_0023.jpg",
+        "timestamp": 1018.68,
+        "seconds": 2.580998420715332,
+        "in": 1338,
+        "out": 120,
+        "text": "This is a video call or podcast recording interface showing two men in webcam feeds on the right side of the screen, with a large blank white area occupying the majority of the frame (likely an empty screen-share or presentation space). The top speaker, wearing a black shirt, is speaking into a microphone, while the bottom speaker in a pink shirt with suspenders appears to be listening."
+      }
+    ],
+    "in": 6690,
+    "out": 720,
+    "cost_usd": 0.02058,
+    "seconds": 15.42599630355835,
+    "per_frame_s": 3.08519926071167,
+    "cost_per_frame": 0.004116
+  },
+  "anthropic/claude-haiku-4-5": {
+    "frames": [
+      {
+        "frame": "scene_0004.jpg",
+        "timestamp": 17.72,
+        "seconds": 1.83174467086792,
+        "in": 1305,
+        "out": 87,
+        "text": "I cannot provide an accurate description of this video frame because the image is severely blurred and out of focus, making it impossible to discern specific text, code, diagrams, or other visually significant details. The frame appears to show a document or application interface with some pink/reddish tones on the left side, but the content is not legible enough to transcribe or describe with certainty."
+      },
+      {
+        "frame": "scene_0007.jpg",
+        "timestamp": 190.12,
+        "seconds": 1.8068523406982422,
+        "in": 1305,
+        "out": 78,
+        "text": "The video shows a screen sharing session with two participants visible in the top right and bottom right corners. The main display shows a loading screen with the text \"Loading GPT-Image2 cases...\" centered on a dark background with a loading spinner icon. This appears to be a live demonstration or presentation of a GPT-Image2 tool that is currently initializing."
+      },
+      {
+        "frame": "scene_0011.jpg",
+        "timestamp": 488.04,
+        "seconds": 2.8819732666015625,
+        "in": 1305,
+        "out": 133,
+        "text": "# Video Frame Description\n\nA webpage for \"AprilNEA / OpenLogi\" displays a video embed with the description \"ShimmyTheDev, two minutes on why you'd drop the Logitech app. Small channel, but current and accurate.\" The page includes navigation tabs (SUMMARY, GROWTH, CREATOR, TWEET, VIDEO) and a \"Watch on YouTube\" link below the video player. On the right side, two people are visible in separate video feeds\u2014one wearing a microphone headset and another in a burgundy shirt\u2014appearing to be participating in a live stream or video call."
+      },
+      {
+        "frame": "scene_0017.jpg",
+        "timestamp": 806.6,
+        "seconds": 3.016191005706787,
+        "in": 1305,
+        "out": 143,
+        "text": "# Video Frame Description\n\nThe frame shows a GitHub repository page for \"MoneyPrinterTurbo\" by harry0703, displaying an embedded YouTube video titled \"MoneyPrinterTurbo: The Open-Source AI Video Generator You Need\" from the Code With Robby channel. The page includes navigation tabs (SUMMARY, GROWTH, CREATOR, TWEET, VIDEO) and describes that \"Code With Robby runs the whole thing in Google Colab with free Gemini and Pexels keys \u2014 no local install.\" On the right side, three people are visible in video call windows, appearing to be discussing or presenting the project."
+      },
+      {
+        "frame": "scene_0023.jpg",
+        "timestamp": 1018.68,
+        "seconds": 1.934091567993164,
+        "in": 1305,
+        "out": 76,
+        "text": "This is a video conference or streaming setup showing two participants in separate video windows on the right side of the screen. The main display area on the left is blank/white, likely reserved for shared content or presentation material. The upper participant is wearing dark clothing and has a microphone visible, while the lower participant is wearing a burgundy/maroon colored shirt."
+      }
+    ],
+    "in": 6525,
+    "out": 517,
+    "cost_usd": 0.00911,
+    "seconds": 11.48534893989563,
+    "per_frame_s": 2.297069787979126,
+    "cost_per_frame": 0.001822
+  }
+}

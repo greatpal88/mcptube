@@ -148,6 +148,21 @@ Guidelines:
 
         return self._build_pages(video, data, frame_descriptions, text_only)
 
+    def build_pages_without_llm(
+        self,
+        video: Video,
+        frame_descriptions: list[FrameDescription] | None = None,
+        text_only: bool = False,
+    ) -> dict:
+        """Same shape as extract(), with no LLM call.
+
+        Used by MCPTUBE_SKIP_WIKI. Passing an empty `data` yields a video page
+        carrying the transcript and the vision frame descriptions, with an
+        empty summary/key_timestamps, and empty entity/topic/concept lists --
+        so the updater writes the video page and nothing else.
+        """
+        return self._build_pages(video, {}, frame_descriptions, text_only)
+
     def _build_pages(
         self,
         video: Video,
