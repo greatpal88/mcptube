@@ -130,6 +130,12 @@ def vision_ran(video_id: str) -> bool:
     is where key_frames lives) but carries no summary, so a page-exists test
     would pass on a page whose frames were never described -- and, with the
     wiki step skipped, a page-absent test would flag every video.
+
+    Every frame must be described, not just one: a vision run cut short by a
+    rate limit or a mid-run error leaves the later frames blank, and the
+    export ships those gaps without comment. A frame count of zero is a
+    failure too -- `all()` over an empty list would otherwise pass a video
+    whose frames were never extracted.
     """
     page = (Path.home() / ".mcptube" / "wiki" / "video"
             / f"video-{video_id}.json")
@@ -140,7 +146,14 @@ def vision_ran(video_id: str) -> bool:
     except (OSError, ValueError):
         return False
     frames = data.get("key_frames") or []
-    return any((f.get("description") or "").strip() for f in frames)
+    if not frames:
+        return False
+    missing = sum(1 for f in frames
+                  if not (f.get("description") or "").strip())
+    if missing:
+        log(f"    {missing}/{len(frames)} frames have no vision description")
+        return False
+    return True
 
 
 def clear_frame_cache(video_id: str) -> None:

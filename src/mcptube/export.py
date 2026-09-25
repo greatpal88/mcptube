@@ -301,7 +301,7 @@ def _visual_lines(video: Video, frames: list[dict],
         lines.append("")
         return lines
 
-    described = sum(1 for f in frames if f.get("description"))
+    described = sum(1 for f in frames if (f.get("description") or "").strip())
     lines.append(
         f"{len(frames)} key frames extracted by scene-change detection; "
         f"{described} with vision descriptions."
