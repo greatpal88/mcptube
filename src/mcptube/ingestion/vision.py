@@ -1,15 +1,25 @@
-"""Vision model integration — describe video frames using multimodal LLM."""
+"""Vision model integration Ã¢â‚¬â€ describe video frames using multimodal LLM."""
 
 import base64
 import logging
 from pathlib import Path
 
-import litellm
 
 from mcptube.llm import LLMClient, LLMError
 from mcptube.wiki.models import FrameDescription
 
 logger = logging.getLogger(__name__)
+
+from functools import lru_cache
+
+
+@lru_cache(maxsize=1)
+def _litellm():
+    """Import litellm on first use (keeps startup fast)."""
+    import litellm
+    litellm.suppress_debug_info = True
+    litellm.drop_params = True
+    return litellm
 
 
 class VisionDescriber:
@@ -114,7 +124,7 @@ Return ONLY the JSON array. No markdown, no explanation."""
         mime = "image/jpeg"
 
         try:
-            response = litellm.completion(
+            response = _litellm().completion(
                 model=self._model,
                 messages=[{
                     "role": "user",
@@ -151,7 +161,7 @@ Return ONLY the JSON array. No markdown, no explanation."""
             })
 
         try:
-            response = litellm.completion(
+            response = _litellm().completion(
                 model=self._model,
                 messages=[{"role": "user", "content": content}],
                 temperature=0.2,
@@ -200,6 +210,6 @@ Return ONLY the JSON array. No markdown, no explanation."""
 
         for key, model in self._VISION_MODELS.items():
             if os.environ.get(key):
-                logger.info("Vision model: %s → %s", key, model)
+                logger.info("Vision model: %s Ã¢â€ â€™ %s", key, model)
                 return model
         return "gpt-4o"

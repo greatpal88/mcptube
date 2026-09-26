@@ -3,19 +3,32 @@
 import json
 import logging
 import os
-
-import litellm
+from functools import lru_cache
 
 from mcptube.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Suppress LiteLLM's verbose logging
-litellm.suppress_debug_info = True
 
-# Drop params the target model does not accept (e.g. Claude Sonnet 5 only
-# supports temperature=1, while this codebase hardcodes temperature=0.2).
-litellm.drop_params = True
+@lru_cache(maxsize=1)
+def _litellm():
+    """Import and configure litellm on first use.
+
+    litellm pulls in the full OpenAI SDK and every provider transformation
+    module -- several seconds of import time. Deferring it keeps process
+    startup fast enough for MCP clients' handshake window; the cost is paid
+    on the first actual LLM call instead.
+    """
+    import litellm
+
+    # Suppress LiteLLM's verbose logging
+    litellm.suppress_debug_info = True
+
+    # Drop params the target model does not accept (e.g. Claude Sonnet 5 only
+    # supports temperature=1, while this codebase hardcodes temperature=0.2).
+    litellm.drop_params = True
+
+    return litellm
 
 
 class LLMError(Exception):
@@ -79,7 +92,7 @@ class LLMClient:
         )
         response = self._complete(prompt)
         return self._parse_tags(response)
-    
+
     def answer_question(self, question: str, transcripts: list[dict]) -> str:
         """Answer a question based on video transcript(s).
 
@@ -108,7 +121,6 @@ class LLMClient:
         )
         return self._complete(prompt)
 
-
     def _complete(self, prompt: str, max_tokens: int = 4096) -> str:
         """Send a completion request to the configured LLM."""
         if not self.available:
@@ -117,7 +129,7 @@ class LLMClient:
                 + ", ".join(self._KEY_TO_MODEL.keys())
             )
         try:
-            response = litellm.completion(
+            response = _litellm().completion(
                 model=self._model,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.2,
