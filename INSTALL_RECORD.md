@@ -124,8 +124,8 @@ corresponding file under the clone's `src\mcptube`, ignoring line endings (venv 
 - **26 of 26 modules identical.** No file exists in one tree and not the other.
 - No files needed to be changed in the clone — the earlier Patch 10 sync had already brought it
   level, and Patches 8 and 9 had been written to both trees at the time they were applied.
-- The one extra file in the venv is `ingestion\scene_frames.py.pre-patch10.bak`, a deliberate
-  backup, not drift.
+- The one extra file in the venv was `ingestion\scene_frames.py.pre-patch10.bak`, a deliberate
+  backup, not drift. It was deleted on 2026-09-26 (see Maintenance log).
 
 The clone is therefore a complete recovery source for the venv as it stands.
 
@@ -303,7 +303,7 @@ on undescribed frames and, had the page been skipped too, would have flagged eve
 first-N, silently truncating the end of the video"
 **File:** `mcptube/ingestion/scene_frames.py`
 **Applied to:** pipx venv **and** the working clone (both, content-identical)
-**Backup of pre-patch venv file:** `…\ingestion\scene_frames.py.pre-patch10.bak`
+**Backup of pre-patch venv file:** `…\ingestion\scene_frames.py.pre-patch10.bak` — deleted 2026-09-26; the pre-patch code remains in git history
 
 ### Problem
 
@@ -423,6 +423,29 @@ Two caveats worth keeping in view:
   vision cost stays flat.
 - Vision is the larger line item and is untouched by Patch 11: ~50 frames/video at 107–213
   output tokens each. Patch 11 cuts the wiki overhead, not the bulk of the spend.
+
+---
+
+## Maintenance log
+
+### 2026-09-26
+
+- Deleted the Patch 10 before/after comparison frame folders `ASlLmFPlJ3M_scenes_BASELINE_prepatch10`
+  (4.68 MB, 51 files) and `b4d32pBa3UY_scenes_BASELINE_prepatch10` (2.22 MB, 51 files) from
+  `C:\Users\mrsim\.mcptube\frames`. Nothing referenced them — mcptube reads only `<id>_scenes` —
+  and the live `_scenes` folders for both videos were left intact.
+- Deleted `ingestion\scene_frames.py.pre-patch10.bak` from the pipx venv after confirming the live
+  `scene_frames.py` differs from it (it has `_select_evenly`; the backup did not) and matches the
+  clone apart from line endings.
+- Rotated `MCPTUBE_ANTHROPIC_KEY`. The new key was tested end-to-end with one video, and the old
+  key was revoked in the Anthropic Console. No key value is recorded here.
+- Removed the mcptube MCP server from Claude Desktop's `claude_desktop_config.json`; the previous
+  config is backed up as `claude_desktop_config.json.bak-2026-09-26`. Checked afterwards: the live
+  config's `mcpServers` is empty, and the backup still holds the `mcptube` entry. The string
+  `mcptube` still appears under the config's `preferences` key; that is not a server entry.
+- Videos are now added **only** via `_batch.py`. With the MCP server gone, nothing in Claude
+  Desktop can call `add_video`, and the Desktop app no longer needs `MCPTUBE_SKIP_WIKI` or an API
+  key in its environment.
 
 ---
 
