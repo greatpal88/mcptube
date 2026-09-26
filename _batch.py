@@ -116,6 +116,18 @@ def frame_stats(video_id: str, duration: float) -> dict:
             "capped": len(ts) >= MAX_FRAMES}
 
 
+# mcptube's vision step writes this literal into a frame description when the
+# call fails, rather than leaving the field empty. It is non-empty, so a
+# .strip() test counts it as described -- match it explicitly.
+VISION_PLACEHOLDER = "(description unavailable)"
+
+
+def described(frame: dict) -> bool:
+    """True if a frame carries real vision output, not a failure placeholder."""
+    text = (frame.get("description") or "").strip()
+    return bool(text) and text != VISION_PLACEHOLDER
+
+
 def vision_ran(video_id: str) -> bool:
     """True if frame descriptions were actually written for this video.
 
@@ -148,10 +160,13 @@ def vision_ran(video_id: str) -> bool:
     frames = data.get("key_frames") or []
     if not frames:
         return False
-    missing = sum(1 for f in frames
-                  if not (f.get("description") or "").strip())
+    placeholder = sum(1 for f in frames
+                      if (f.get("description") or "").strip()
+                      == VISION_PLACEHOLDER)
+    missing = sum(1 for f in frames if not described(f))
     if missing:
-        log(f"    {missing}/{len(frames)} frames have no vision description")
+        log(f"    {missing}/{len(frames)} frames have no vision description"
+            f" ({placeholder} placeholder, {missing - placeholder} blank)")
         return False
     return True
 

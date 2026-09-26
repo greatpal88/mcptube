@@ -63,6 +63,20 @@ def _yaml_str(value: object) -> str:
     return json.dumps("" if value is None else str(value), ensure_ascii=False)
 
 
+# Written by the vision step (mcptube/ingestion/vision.py) when a frame could
+# not be described: a short JSON array from the batch call pads its tail with
+# this, and a failed per-frame call substitutes it outright. It is a non-empty
+# string, so a truthiness or .strip() test counts it as a real description --
+# match it explicitly or the coverage line overstates what vision produced.
+VISION_PLACEHOLDER = "(description unavailable)"
+
+
+def has_description(frame: dict) -> bool:
+    """True if a frame carries real vision output, not a failure placeholder."""
+    text = (frame.get("description") or "").strip()
+    return bool(text) and text != VISION_PLACEHOLDER
+
+
 def chapter_at(timestamp: float, chapters: list[Chapter]) -> Chapter | None:
     """The chapter containing a timestamp, or None."""
     found = None
@@ -301,7 +315,7 @@ def _visual_lines(video: Video, frames: list[dict],
         lines.append("")
         return lines
 
-    described = sum(1 for f in frames if (f.get("description") or "").strip())
+    described = sum(1 for f in frames if has_description(f))
     lines.append(
         f"{len(frames)} key frames extracted by scene-change detection; "
         f"{described} with vision descriptions."
