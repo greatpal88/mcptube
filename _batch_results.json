@@ -542,15 +542,15 @@
     "title": "My FULL OpenClaw Setup (steal my prompts!)",
     "channel": "Tina Huang",
     "duration": 1562.0,
-    "frames": 0,
-    "first": null,
-    "last": null,
-    "coverage_pct": 0.0,
-    "capped": false,
+    "frames": 50,
+    "first": 1.2012,
+    "last": 1521.253067,
+    "coverage_pct": 97.4,
+    "capped": true,
     "export": "C:\\Users\\mrsim\\OneDrive - Initiative Project Inc\\Vaults\\ai-research\\raw\\sources\\youtube-oOCN30ulVyo-my-full-openclaw-setup-steal-my-prompts.md",
     "vision": true,
     "status": "ok",
-    "seconds": 120.1
+    "seconds": 355.2
   },
   "iTY8Q449YNQ": {
     "video_id": "iTY8Q449YNQ",
