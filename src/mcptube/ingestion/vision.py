@@ -165,21 +165,30 @@ Return ONLY the JSON array. No markdown, no explanation."""
                 text = text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
             descs = json.loads(text)
 
+            # A reply with the wrong number of elements tells us nothing
+            # about WHICH frame it skipped, so the whole chunk's alignment is
+            # suspect -- keeping the first len(descs) would silently shift
+            # every later description onto the wrong frame. Re-describe the
+            # chunk one frame at a time instead, where each reply can only
+            # belong to the image it was sent with. Padding the tail is what
+            # produced the "(description unavailable)" frames this guards
+            # against; a genuine per-frame failure still yields that literal,
+            # but now only for the frame that actually failed.
             if len(descs) != len(frames):
                 logger.warning(
                     "Vision returned %d descriptions for %d frames; "
-                    "padding %d with the unavailable placeholder",
-                    len(descs), len(frames), len(frames) - len(descs))
+                    "re-describing this chunk individually",
+                    len(descs), len(frames))
+                return self._describe_individually(frames)
 
-            descriptions = []
-            for i, frame in enumerate(frames):
-                desc = descs[i] if i < len(descs) else "(description unavailable)"
-                descriptions.append(FrameDescription(
+            return [
+                FrameDescription(
                     filename=frame["path"].name,
                     timestamp=frame["timestamp"],
-                    description=desc,
-                ))
-            return descriptions
+                    description=descs[i],
+                )
+                for i, frame in enumerate(frames)
+            ]
 
         except Exception as e:
             logger.warning("Batch vision failed, falling back to individual: %s", e)
