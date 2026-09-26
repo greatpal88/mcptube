@@ -20,10 +20,20 @@ class VisionDescriber:
     """
 
     _VISION_MODELS = {
-        "ANTHROPIC_API_KEY": "anthropic/claude-sonnet-4-20250514",
+        "ANTHROPIC_API_KEY": "anthropic/claude-sonnet-5",
         "OPENAI_API_KEY": "gpt-4o",
         "GOOGLE_API_KEY": "gemini/gemini-2.0-flash",
     }
+
+    # Frames per batch request, and the reply budget for one such request.
+    # The failure these guard against is a reply whose JSON array is shorter
+    # than the chunk it answers: describe_batch pads the tail with
+    # "(description unavailable)", which is a non-empty string and so reads
+    # downstream as a real description. Fewer images per request makes the
+    # model far likelier to return exactly one element per frame, and 8192
+    # leaves 20 descriptions of 1-3 sentences ample room.
+    _BATCH_SIZE = 20
+    _BATCH_MAX_TOKENS = 8192
 
     _FRAME_PROMPT = """Describe this video frame concisely in 1-3 sentences.
 Focus on what is visually significant:
@@ -67,11 +77,16 @@ Return ONLY the JSON array. No markdown, no explanation."""
             return []
 
         # For small batches, describe individually for better quality
-        # For larger batches, use batch mode to save cost
+        # For larger batches, use batch mode to save cost -- in chunks, so no
+        # single reply has to cover more frames than it can comfortably fit.
         if len(frames) <= 5:
             return self._describe_individually(frames)
-        else:
-            return self._describe_batch(frames)
+
+        described: list[FrameDescription] = []
+        for i in range(0, len(frames), self._BATCH_SIZE):
+            described.extend(
+                self._describe_batch(frames[i:i + self._BATCH_SIZE]))
+        return described
 
     def _describe_individually(self, frames: list[dict]) -> list[FrameDescription]:
         """Describe each frame with a separate vision call."""
@@ -140,7 +155,7 @@ Return ONLY the JSON array. No markdown, no explanation."""
                 model=self._model,
                 messages=[{"role": "user", "content": content}],
                 temperature=0.2,
-                max_tokens=2048,
+                max_tokens=self._BATCH_MAX_TOKENS,
             )
             raw = response.choices[0].message.content.strip()
 
@@ -150,15 +165,30 @@ Return ONLY the JSON array. No markdown, no explanation."""
                 text = text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
             descs = json.loads(text)
 
-            descriptions = []
-            for i, frame in enumerate(frames):
-                desc = descs[i] if i < len(descs) else "(description unavailable)"
-                descriptions.append(FrameDescription(
+            # A reply with the wrong number of elements tells us nothing
+            # about WHICH frame it skipped, so the whole chunk's alignment is
+            # suspect -- keeping the first len(descs) would silently shift
+            # every later description onto the wrong frame. Re-describe the
+            # chunk one frame at a time instead, where each reply can only
+            # belong to the image it was sent with. Padding the tail is what
+            # produced the "(description unavailable)" frames this guards
+            # against; a genuine per-frame failure still yields that literal,
+            # but now only for the frame that actually failed.
+            if len(descs) != len(frames):
+                logger.warning(
+                    "Vision returned %d descriptions for %d frames; "
+                    "re-describing this chunk individually",
+                    len(descs), len(frames))
+                return self._describe_individually(frames)
+
+            return [
+                FrameDescription(
                     filename=frame["path"].name,
                     timestamp=frame["timestamp"],
-                    description=desc,
-                ))
-            return descriptions
+                    description=descs[i],
+                )
+                for i, frame in enumerate(frames)
+            ]
 
         except Exception as e:
             logger.warning("Batch vision failed, falling back to individual: %s", e)
