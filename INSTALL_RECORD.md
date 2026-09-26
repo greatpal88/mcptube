@@ -278,8 +278,10 @@ Set persistently with:
 setx MCPTUBE_SKIP_WIKI 1
 ```
 
-The mcptube MCP server inherits its environment from the Claude desktop app, so it only picks
-this up after that app restarts.
+Since 2026-09-26 the mcptube MCP server is no longer registered in Claude Desktop (see
+Maintenance log), so `_batch.py` is the only consumer of this setting. If the server is ever
+re-added, it inherits its environment from the Claude desktop app and only picks this up after
+that app restarts.
 
 ### Cost
 
