@@ -319,7 +319,11 @@ def main() -> None:
         log(f"    {entry['frames']} frames, {entry['coverage_pct']}% coverage,"
             f" {entry['seconds']}s{flag}")
 
-    ok = sum(1 for e in results.values() if e.get("status") == "ok")
+    # Count only this run's videos: `results` accumulates every video
+    # ever processed, so counting it whole reported "48/1 ok" for a
+    # single-video re-ingest.
+    ok = sum(1 for v in video_ids
+             if results.get(v, {}).get("status") == "ok")
     log(f"batch done: {ok}/{len(video_ids)} ok "
         f"in {(time.time()-t_batch)/60:.0f} min")
 
