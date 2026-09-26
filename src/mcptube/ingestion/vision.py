@@ -25,6 +25,16 @@ class VisionDescriber:
         "GOOGLE_API_KEY": "gemini/gemini-2.0-flash",
     }
 
+    # Frames per batch request, and the reply budget for one such request.
+    # The failure these guard against is a reply whose JSON array is shorter
+    # than the chunk it answers: describe_batch pads the tail with
+    # "(description unavailable)", which is a non-empty string and so reads
+    # downstream as a real description. Fewer images per request makes the
+    # model far likelier to return exactly one element per frame, and 8192
+    # leaves 20 descriptions of 1-3 sentences ample room.
+    _BATCH_SIZE = 20
+    _BATCH_MAX_TOKENS = 8192
+
     _FRAME_PROMPT = """Describe this video frame concisely in 1-3 sentences.
 Focus on what is visually significant:
 - Slides or text on screen: transcribe key text
@@ -67,11 +77,16 @@ Return ONLY the JSON array. No markdown, no explanation."""
             return []
 
         # For small batches, describe individually for better quality
-        # For larger batches, use batch mode to save cost
+        # For larger batches, use batch mode to save cost -- in chunks, so no
+        # single reply has to cover more frames than it can comfortably fit.
         if len(frames) <= 5:
             return self._describe_individually(frames)
-        else:
-            return self._describe_batch(frames)
+
+        described: list[FrameDescription] = []
+        for i in range(0, len(frames), self._BATCH_SIZE):
+            described.extend(
+                self._describe_batch(frames[i:i + self._BATCH_SIZE]))
+        return described
 
     def _describe_individually(self, frames: list[dict]) -> list[FrameDescription]:
         """Describe each frame with a separate vision call."""
@@ -140,7 +155,7 @@ Return ONLY the JSON array. No markdown, no explanation."""
                 model=self._model,
                 messages=[{"role": "user", "content": content}],
                 temperature=0.2,
-                max_tokens=2048,
+                max_tokens=self._BATCH_MAX_TOKENS,
             )
             raw = response.choices[0].message.content.strip()
 
@@ -149,6 +164,12 @@ Return ONLY the JSON array. No markdown, no explanation."""
             if text.startswith("```"):
                 text = text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
             descs = json.loads(text)
+
+            if len(descs) != len(frames):
+                logger.warning(
+                    "Vision returned %d descriptions for %d frames; "
+                    "padding %d with the unavailable placeholder",
+                    len(descs), len(frames), len(frames) - len(descs))
 
             descriptions = []
             for i, frame in enumerate(frames):
