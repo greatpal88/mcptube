@@ -13,6 +13,10 @@ logger = logging.getLogger(__name__)
 # Suppress LiteLLM's verbose logging
 litellm.suppress_debug_info = True
 
+# Drop params the target model does not accept (e.g. Claude Sonnet 5 only
+# supports temperature=1, while this codebase hardcodes temperature=0.2).
+litellm.drop_params = True
+
 
 class LLMError(Exception):
     """Raised when an LLM operation fails."""
@@ -26,7 +30,7 @@ class LLMClient:
     """
 
     _KEY_TO_MODEL = {
-        "ANTHROPIC_API_KEY": "anthropic/claude-sonnet-4-20250514",
+        "ANTHROPIC_API_KEY": "anthropic/claude-sonnet-5",
         "OPENAI_API_KEY": "gpt-4o",
         "GOOGLE_API_KEY": "gemini/gemini-2.0-flash",
     }
