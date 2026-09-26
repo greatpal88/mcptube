@@ -45,3 +45,4 @@ dist/
 *.html
 
 test.md
+_batch.log
